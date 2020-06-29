@@ -1,16 +1,21 @@
+#!/usr/bin/python3
+
 from Bio import Entrez
 import sys
 
 sra_list=[]
 for line in open(sys.argv[1], "r"):
-     sra_list.append(line.strip())
+     sra_list.append(line.strip().split()[0])
 
 Entrez.email = "mike.rayko@gmail.com"
 
 
 
 for i in sra_list:
-    handle = Entrez.efetch(db="sra", id = i, rettype="runinfo", retmode="text") # or esearch, efetch, ...
+    try:
+        handle = Entrez.efetch(db="sra", id = i, rettype="runinfo", retmode="text") # or esearch, efetch, ...
+    except:
+        print ("{}\t Failed".format(i))
     meta = handle.readlines()
     meta_dict = dict(zip(meta[0].split(","), meta[1].split(",")))
     if meta_dict["Platform"] != "ILLUMINA":
