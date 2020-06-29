@@ -16,6 +16,7 @@ for i in sra_list:
         handle = Entrez.efetch(db="sra", id = i, rettype="runinfo", retmode="text") # or esearch, efetch, ...
     except:
         print ("{}\t Failed".format(i))
+        continue
     meta = handle.readlines()
     meta_dict = dict(zip(meta[0].split(","), meta[1].split(",")))
     if meta_dict["Platform"] != "ILLUMINA":
