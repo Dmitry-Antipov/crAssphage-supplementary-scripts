@@ -10,22 +10,26 @@ for line in open(sys.argv[1], "r"):
 Entrez.email = "mike.rayko@gmail.com"
 
 
+retmax = 10
+for i in range (0, len(sra_list),retmax):
+    id_list = ",".join(sra_list[i: min(i+retmax, len(sra_list))])
 
-for i in sra_list:
     try:
-        handle = Entrez.efetch(db="sra", id = i, rettype="runinfo", retmode="text") # or esearch, efetch, ...
+        handle = Entrez.efetch(db="sra", id = id_list, rettype="runinfo", retmode="text")
     except:
-        print ("{}\t Failed".format(i))
+        print (f'Failed in {str(i)} - {min(i+retmax, len(sra_list))}')
         continue
+
     meta = handle.readlines()
-    meta_dict = dict(zip(meta[0].split(","), meta[1].split(",")))
-    if meta_dict["Platform"] != "ILLUMINA":
-        print(meta_dict["Run"] + "\t "+ "Non_illumina")
-    else:
-        if meta_dict["LibraryLayout"] == "PAIRED":
-            print(meta_dict["Run"] + "\t "+ str(int(meta_dict["avgLength"])/2)) 
+    for i in range (1, len(meta)-1):
+        meta_dict = dict(zip(meta[0].split(","), meta[i].split(",")))
+        if meta_dict["Platform"] != "ILLUMINA":
+            print(meta_dict["Run"] + "\t "+ "Non_illumina")
         else:
-            print(meta_dict["Run"] + "\t "+ str(int(meta_dict["avgLength"])))
+            if meta_dict["LibraryLayout"] == "PAIRED":
+                print(meta_dict["Run"] + "\t "+ str(int(meta_dict["avgLength"])/2)) 
+            else:
+                print(meta_dict["Run"] + "\t "+ str(int(meta_dict["avgLength"])))
 
 
     handle.close()
