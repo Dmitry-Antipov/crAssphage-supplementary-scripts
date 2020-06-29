@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-#add some  contamination for meta-genomic simulation
 
 import sys
 import os
