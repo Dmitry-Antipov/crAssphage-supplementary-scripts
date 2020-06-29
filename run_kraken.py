@@ -25,6 +25,8 @@ ref = "/Bmo/dantipov/gut_pipeline/june_abund/all_genomes.fa"
 #workdir = "/Iceking/dantipov/human_gut/check/"
 workdir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_res/"
 kraken_bin = "/home/dantipov/other_tools/kraken2/kraken/kraken2"
+braken_bin = "/Nancy/mrayko/Libs/Bracken-2.5/bracken"
+
 kraken_db ="/Bmo/dantipov/gut_pipeline/kraken_viral_db/"
 sra_tools =  "/home/dantipov/other_tools/sratoolkit.2.10.7-ubuntu64/bin/"
 list = "/home/dantipov/scripts/human_gut_virome/sra_only.list"
@@ -71,6 +73,19 @@ def get_kraken_str(srr_id, inputdir, workdir):
     return res
 
 
+def get_bracken_str(srr_id, length, workdir)
+#-d /Bmo/dantipov/gut_pipeline/kraken_viral_db/  -i  ERR688506_upd.report -o ERR688506_nodes.bracken -r 100
+    infile = join(workdir, srr_id+".report")
+    outfile = join(workdir, srr_id+".braken.report")
+    if not os.path.exists(infile) or os.path.exists(outfile):
+        return ""
+    res = braken_bin + " -d " + kraken_db + " -i " +infile + " -o " + outfile + " -r " + length
+    return res
+
+def bracken_sample(inputdir, srr_id, workdir):
+    bracken_str = get_bracken_str(srr_id, length, workdir)
+    if bracken_str != ""
+        os.system(bracken_str)
 
 def kraken_sample(inputdir, srr_id, workdir):
     if  not os.path.isdir (workdir):
@@ -93,7 +108,7 @@ def kraken_sample(inputdir, srr_id, workdir):
     print kraken_str
     os.system(kraken_str)
 
-def run_all(list, inputdir, workdir):
+def run_all_kraken(list, inputdir, workdir):
     ids = []
     for line in open (list, "r"):
         ids.append(line.strip())
@@ -101,6 +116,15 @@ def run_all(list, inputdir, workdir):
 #        kraken_sample(inputdir, id, workdir)
 
     Parallel(n_jobs=5)(delayed(kraken_sample)(inputdir, id, workdir)
+    for id  in ids)
+def run_all_bracken (list, inputdir, workdir):
+    ids = []
+    for line in open (list, "r"):
+        ids.append(line.strip())
+#    for id in ids:
+#        kraken_sample(inputdir, id, workdir)
+
+    Parallel(n_jobs=5)(delayed(bracken_sample)(inputdir, id, workdir)
     for id  in ids)
 
 def count_absolute(workdir, length_list):
