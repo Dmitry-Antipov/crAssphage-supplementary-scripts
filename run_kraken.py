@@ -145,8 +145,10 @@ def run_all_bracken (list, workdir):
 def merge_brackens(workdir):
     nodes = taxonomy_scripts.read_nodes(taxonomy_scripts.kraken_names, taxonomy_scripts.kraken_nodes)
     bracken_all = {}
-    for f in workdir:
-        if f.split("_")[1] == "bracken.report":
+    for f in os.listdir(workdir):
+        arr = f.split("_")
+        
+        if len(arr) > 1 and arr[-1] == "bracken.report":
             for line in open(join(workdir,f),'r'):
                 br = bracken_stats(line)
                 if not br.id in bracken_all:
@@ -156,8 +158,20 @@ def merge_brackens(workdir):
                     bracken_all[br.id].reads_self += br.reads_self
     for br in bracken_all:
         bracken_all[br].percentage = 100.00 * bracken_all[br].reads_clade / bracken_all[1].reads_clade
-#merge_brackens(workdir)
-run_all_bracken(patched_list, workdir)
+    for br in bracken_all:
+        bracken_all[br].childs = {}
+    for br in bracken_all:
+        if br != 1:
+            bracken_all[nodes[br].parent_id].childs[br] = bracken_all[br].reads_clade
+    def print_childs(id):
+#100.00  443943  0       D       10239     Viruses
+        info = bracken_all[id]
+        print ("{:.2f}".format(info.percentage) + "\t" + str(info.reads_clade) + "\t" + str(info.reads_self) +  "\t" + info.level + "\t" + str(info.id) + "\t" + info.name)
+        for child in sorted(info.childs, key=info.childs.get, reverse=True):
+            print_childs(child)
+    print_childs(1)
+merge_brackens(workdir)
+#run_all_bracken(patched_list, workdir)
 #run_all(list, inputdir, workdir)
 
 #count_absolute(workdir, length_list)
