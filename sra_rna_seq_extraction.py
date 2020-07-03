@@ -39,9 +39,6 @@ for library in root.iter('LIBRARY_STRATEGY'):
     strategy.append(library.text)
 
 
-print(sra_list)
-print(id_list)
-print(strategy)
 for i in range(0,len(id_list)):
     print(id_to_sra[id_list[i]], id_list[i], strategy[i])
 
