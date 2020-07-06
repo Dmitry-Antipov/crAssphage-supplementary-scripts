@@ -30,7 +30,7 @@ kraken_dir = "/home/dantipov/other_tools/kraken2/kraken/"
 kraken_db ="/Bmo/dantipov/gut_pipeline/kraken_viral_db/"
 sra_tools =  "/home/dantipov/other_tools/sratoolkit.2.10.7-ubuntu64/bin/"
 list = "/home/dantipov/scripts/human_gut_virome/sra_only.list"
-patched_list = "/home/dantipov/scripts/human_gut_virome/500_patched.list"
+patched_list = "/home/dantipov/scripts/human_gut_virome/all_length.list"
 length_list = "/Bmo/dantipov/gut_pipeline/june_abund/all_genomes.length"
 inputdir = "/Bmo/dantipov/data/500_random_datasets/"
 #classified = "/Bmo/dantipov/gut_pipeline/abundancy_check/596_crass_related_gut_contigs.tsv"
@@ -138,10 +138,15 @@ def run_all_bracken (list, workdir):
     ids = []
     for line in open (list, "r"):
         arr = line.strip().split()
-        if  not arr[1].isdecimal():
-            continue
-        bracken_sample(arr[0], arr[1], workdir)        
+        try:
+            length = float(arr[1])
+            length = int(round(length))
 
+        except:    
+            print (arr[0] + " is not illumina " + arr[1])
+            continue
+        bracken_sample(arr[0], str(length), workdir)        
+        
 def merge_brackens(workdir):
     nodes = taxonomy_scripts.read_nodes(taxonomy_scripts.kraken_names, taxonomy_scripts.kraken_nodes)
     bracken_all = {}
@@ -156,8 +161,11 @@ def merge_brackens(workdir):
                 else:
                     bracken_all[br.id].reads_clade += br.reads_clade
                     bracken_all[br.id].reads_self += br.reads_self
+    start_node = 1
+#root in podoviridae
+    start_node = 10744
     for br in bracken_all:
-        bracken_all[br].percentage = 100.00 * bracken_all[br].reads_clade / bracken_all[1].reads_clade
+        bracken_all[br].percentage = 100.00 * bracken_all[br].reads_clade / bracken_all[start_node].reads_clade
     for br in bracken_all:
         bracken_all[br].childs = {}
     for br in bracken_all:
@@ -169,9 +177,8 @@ def merge_brackens(workdir):
         print ("{:.2f}".format(info.percentage) + "\t" + str(info.reads_clade) + "\t" + str(info.reads_self) +  "\t" + info.level + "\t" + str(info.id) + "\t" + info.name)
         for child in sorted(info.childs, key=info.childs.get, reverse=True):
             print_childs(child)
-    print_childs(1)
+    print_childs(start_node)
 merge_brackens(workdir)
 #run_all_bracken(patched_list, workdir)
 #run_all(list, inputdir, workdir)
 
-#count_absolute(workdir, length_list)

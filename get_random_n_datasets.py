@@ -12,7 +12,7 @@ inputdir = "/Bmo/data/projects/human_gut_meta_NCBI/"
 outputdir = "/Iceking/dantipov/human_gut/other_datasets/"
 #inputdir = sys.argv[1]
 sra_pref = "/home/dantipov/other_tools/sratoolkit.2.10.7-ubuntu64/bin/"
-other_datasets = "/Iceking/dantipov/human_gut/500_random_datasets/"
+other_datasets = "/Bmo/dantipov/data/500_random_datasets/"
 list = "/home/dantipov/scripts/human_gut_virome/all.list"
 
 def download_sample(id, outdir):

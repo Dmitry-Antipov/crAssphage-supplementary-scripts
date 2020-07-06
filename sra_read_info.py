@@ -2,36 +2,48 @@
 
 from Bio import Entrez
 import sys
+import csv
+def get_sra_info(infile):
+    sra_list=[]
+    for line in open(infile, "r"):
+         sra_list.append(line.strip().split()[0])
+    sra_set = set(sra_list)
+    res = {}
+    Entrez.email = "d.antipov@spbu.ru"
 
-sra_list=[]
-for line in open(sys.argv[1], "r"):
-     sra_list.append(line.strip().split()[0])
 
-Entrez.email = "mike.rayko@gmail.com"
+    retmax = 200
+    for i in range (0, len(sra_list),retmax):
+        id_list = ",".join(sra_list[i: min(i+retmax, len(sra_list))])
 
+        try:
+            handle = Entrez.efetch(db="sra", id = id_list, rettype="runinfo", retmode="text")
+        except:
+            print (f'Failed in {str(i)} - {min(i+retmax, len(sra_list))}')
+            exit(1)
 
-retmax = 500
-for i in range (0, len(sra_list),retmax):
-    id_list = ",".join(sra_list[i: min(i+retmax, len(sra_list))])
-
-    try:
-        handle = Entrez.efetch(db="sra", id = id_list, rettype="runinfo", retmode="text")
-    except:
-        print (f'Failed in {str(i)} - {min(i+retmax, len(sra_list))}')
-        continue
-
-    meta = handle.readlines()
-    for i in range (1, len(meta)):
-        if len(meta[0].split(",")) != len(meta[i].split(",")) or meta[0].split(",")[0] == meta[i].split(",")[0] :
-            continue
-        else:
-            meta_dict = dict(zip(meta[0].split(","), meta[i].split(",")))
-            if meta_dict["Platform"] != "ILLUMINA":
-                print(meta_dict["Run"] + "\t "+ "Non_illumina")
+        meta = handle.readlines()
+        parsed = list(csv.reader(meta))
+        names = parsed[0]
+        for i in range(1, len(parsed)) :
+#            names = list(csv.reader(StringIO(meta[0])))[0]
+            values = parsed[i]
+            if len(names) != len (values):
+                continue
             else:
+                meta_dict = dict(zip(names, values))
+                if meta_dict["Run"] not in sra_set:
+                    continue
+                
                 if meta_dict["LibraryLayout"] == "PAIRED":
-                    print(meta_dict["Run"] + "\t "+ str(int(meta_dict["avgLength"])/2)) 
+                    avg_len = str(int(meta_dict["avgLength"])/2) 
                 else:
-                    print(meta_dict["Run"] + "\t "+ str(int(meta_dict["avgLength"])))
-    handle.close()
+                    avg_len = str(int(meta_dict["avgLength"]))
+#ID strategy platform avrg_read_length number_of_reads
+                res[meta_dict["Run"]] = (meta_dict["Run"] + " "+ meta_dict["LibraryStrategy"] + " "+ meta_dict["Platform"] + " " + avg_len +" "+ meta_dict["spots"])
+        handle.close()
+    for sra in sra_list:
+        print(res[sra])
+if __name__ == "__main__":
+    get_sra_info(sys.argv[1])
 
