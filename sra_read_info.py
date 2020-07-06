@@ -43,26 +43,7 @@ def get_sra_info(infile):
         handle.close()
     for sra in sra_list:
         print(res[sra])
+
 if __name__ == "__main__":
     get_sra_info(sys.argv[1])
 
-    for i in sra_list:
-        if i not in out_dict:
-            meta_dict = {x: "NA" for x in meta_dict}
-            out_dict[i]=meta_dict
-
-
-    return (out_dict)
-    
-
-meta = get_metadata(sra_list)
-
-for i in sra_list:
-    if meta[i]["Platform"] != "ILLUMINA":
-        print(i + "\t "+ "Non_illumina")
-    else:
-        if meta[i]["LibraryLayout"] == "PAIRED":
-            print(f'{i} \t {str(int(meta[i]["avgLength"])/2)} \t {meta[i]["LibraryStrategy"]}') 
-        else:
-            print(f'{i} \t {str(int(meta[i]["avgLength"]))} \t {meta[i]["LibraryStrategy"]}')
-            
