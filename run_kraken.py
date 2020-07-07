@@ -22,14 +22,20 @@ ref = "/Bmo/dantipov/gut_pipeline/june_abund/all_genomes.fa"
 #workdir = "/Iceking/dantipov/human_gut/depth_reports/"
 #workdir = "/Iceking/dantipov/human_gut/crass_reports/"
 #workdir = "/Iceking/dantipov/human_gut/check/"
-workdir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_res/"
+workdir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_res2/"
 kraken_bin = "/home/dantipov/other_tools/kraken2/kraken/kraken2"
 braken_bin = "/Nancy/mrayko/Libs/Bracken-2.5/bracken"
 kraken_dir = "/home/dantipov/other_tools/kraken2/kraken/"
+tmp_dir = "/tmp/dantipov/"
+trimmomatic_jar = "/Nancy/mrayko/Libs/Trimmomatic-0.39/trimmomatic-0.39.jar"
+adapters_fasta = "/home/dantipov/scripts/human_gut_virome/adapters.fa"
+trim_in_suff = ["_1.fastq.gz", ".fastq.gz", "_2.fastq.gz"]
+trim_out_suff = ["_1P.fastq", "_2P.fastq", "_1U.fastq", "_2U.fastq", "_S.fastq"]
 
 kraken_db ="/Bmo/dantipov/gut_pipeline/kraken_viral_db/"
 sra_tools =  "/home/dantipov/other_tools/sratoolkit.2.10.7-ubuntu64/bin/"
-list = "/home/dantipov/scripts/human_gut_virome/sra_only.list"
+#list = "/home/dantipov/scripts/human_gut_virome/500_updated.list"
+list = "/Bmo/dantipov/data/500_random_datasets/500_updated.list"
 patched_list = "/home/dantipov/scripts/human_gut_virome/all_length.list"
 length_list = "/Bmo/dantipov/gut_pipeline/june_abund/all_genomes.length"
 inputdir = "/Bmo/dantipov/data/500_random_datasets/"
@@ -68,14 +74,45 @@ def run_sample(sample_descr):
     process_sample(sample_descr, workdir)
 
 
-def get_kraken_str(srr_id, inputdir, workdir):
-    read1 = join(inputdir, srr_id+ "_1.fastq.gz")
-    read2 = join(inputdir, srr_id+ "_2.fastq.gz")
+def get_kraken_str(srr_id, tmp_dir, workdir):
+#    read1 = join(inputdir, srr_id+ "_1.fastq.gz")
+#    read2 = join(inputdir, srr_id+ "_2.fastq.gz")
+    reads = " "
+    for input_suffix in trim_out_suff:
+        f = join(tmp_dir, srr_id + input_suffix)
+        if isfile (f):
+            reads += " " + f
+
 #./kraken/kraken2 /Bmo/dantipov/data/500_random_datasets//ERR688506_1.fastq.gz /Bmo/dantipov/data/500_random_datasets//ERR688506_2.fastq
 #.gz --threads 20 --db /Bmo/dantipov/gut_pipeline/kraken_viral_db/ --report ERR688506_upd.report>/dev/null
-    res = kraken_bin + " " + read1 + " " + read2  + " --threads 15 --db " + kraken_db + " --report " + join(workdir,srr_id+".report") + " >/dev/null"
+    res = kraken_bin + " " + reads  + " --threads 15 --db " + kraken_db + " --report " + join(workdir,srr_id+".report") + " >/dev/null"
     return res
 
+def get_trimmomatic_str(srr_id, input_dir, outdir):
+    reads = " "
+    count = 0
+    for input_suffix in trim_in_suff:
+        f = join(input_dir, srr_id + input_suffix)
+        if isfile (f):
+            reads += " " + f
+            count += 1
+    if count == 2:
+        mode = " PE "
+        out_opt = " -baseout "+ join(outdir, srr_id)+".fastq" 
+    else:
+        mode = " SE "
+        out_opt = join(outdir, srr_id)+"_S.fastq" 
+    str = "java -jar "+ trimmomatic_jar +mode + reads + " -threads 10 " + out_opt  + "  ILLUMINACLIP:" + adapters_fasta + ":2:30:10 >/dev/null"
+    return str
+#java -jar  /Nancy/mrayko/Libs/Trimmomatic-0.39/trimmomatic-0.39.jar  PE -threads 30 -basein /Bmo/dantipov/data/500_random_datasets/ERR525702_1.fastq.gz  -baseout ERR525702 ILLUMINACLIP:/Nancy/mrayko/Libs/Trimmomatic-0.39/adapters/total.fa:2:30:10
+
+def clear_temporary_trim(srr_id, tmp_dir):
+    reads = " "
+    for input_suffix in trim_out_suff:
+        f = join(tmp_dir, srr_id + input_suffix)
+        if isfile (f):
+            os.remove(f)
+    
 
 def get_bracken_str(srr_id, length, workdir):
 #-d /Bmo/dantipov/gut_pipeline/kraken_viral_db/  -i  ERR688506_upd.report -o ERR688506_nodes.bracken -r 100
@@ -109,29 +146,25 @@ def bracken_sample(srr_id, length, workdir):
 def kraken_sample(inputdir, srr_id, workdir):
     if  not os.path.isdir (workdir):
         os.mkdir(workdir)
-#    if sample_descr[-2] == "OXFORD_NANOPORE":
-#TODO elif ionTORRENT    
-#        minimap_str = get_minimap_nanopore(srr_id, workdir)
-#    elif sample_descr[2] == "PAIRED":
-#        minimap_str = get_minimap_illumina_paired(srr_id, workdir)
-#    else:
-#        minimap_str = get_minimap_illumina_single(srr_id, workdir)
-#    print minimap_str
-    if not os.path.isfile (join(inputdir, srr_id + "_1.fastq.gz")):
+   # print (join(inputdir, srr_id + "_1.fastq.gz"))
+    if not os.path.isfile (join(inputdir, srr_id + "_1.fastq.gz")) and not os.path.isfile(join(inputdir, srr_id + ".fastq.gz")) :
         print (srr_id + " is not present")
         return
-    if not os.path.isfile (join(inputdir, srr_id + "_2.fastq.gz")):
-        print (srr_id + " is not paired illumina")
-        return
-    kraken_str = get_kraken_str(srr_id, inputdir, workdir)
-    print (kraken_str)
-    os.system(kraken_str)
+    trimmomatic_str = get_trimmomatic_str (srr_id, inputdir, tmp_dir)
+#    print (trimmomatic_str)
+    os.system(trimmomatic_str)
+    kraken_str = get_kraken_str(srr_id,tmp_dir, workdir)
+#    print (kraken_str)
+    os.system(kraken_str)  
+    clear_temporary_trim(srr_id, tmp_dir )
 
 def run_all_kraken(list, inputdir, workdir):
     ids = []
     for line in open (list, "r"):
-        ids.append(line.strip())
-    Parallel(n_jobs=5)(delayed(kraken_sample)(inputdir, id, workdir)
+        arr = line.split()
+        if len(arr) > 0 and arr[1] == "WGS" and arr[2] == "ILLUMINA":
+           ids.append(arr[0])
+    Parallel(n_jobs=7)(delayed(kraken_sample)(inputdir, id, workdir)
     for id  in ids)
 
 def run_all_bracken (list, workdir):
@@ -178,7 +211,7 @@ def merge_brackens(workdir):
         for child in sorted(info.childs, key=info.childs.get, reverse=True):
             print_childs(child)
     print_childs(start_node)
-merge_brackens(workdir)
+#merge_brackens(workdir)
 #run_all_bracken(patched_list, workdir)
-#run_all(list, inputdir, workdir)
+run_all_kraken(list, inputdir, workdir)
 

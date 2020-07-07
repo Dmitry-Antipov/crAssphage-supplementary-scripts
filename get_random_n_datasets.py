@@ -13,7 +13,7 @@ outputdir = "/Iceking/dantipov/human_gut/other_datasets/"
 #inputdir = sys.argv[1]
 sra_pref = "/home/dantipov/other_tools/sratoolkit.2.10.7-ubuntu64/bin/"
 other_datasets = "/Bmo/dantipov/data/500_random_datasets/"
-list = "/home/dantipov/scripts/human_gut_virome/all.list"
+list = "/home/dantipov/scripts/human_gut_virome/all_updated.list"
 
 def download_sample(id, outdir):
     if isfile(join(other_datasets, id + "_1.fastq.gz")) or isfile(join(outputdir, id + "_1.fastq.gz")):
@@ -22,10 +22,14 @@ def download_sample(id, outdir):
     pr_line = sra_pref + "prefetch --max-size 40000000 " + id
     print pr_line
     os.system(pr_line)
-    fq_dump_line = sra_pref + "fastq-dump --gzip --split-files " + id + " -O " + outdir
+    fq_dump_line = sra_pref + "fasterq-dump -t /tmp/dantipov/ " + id + " -O " + outdir
+    
     print fq_dump_line
     os.system(fq_dump_line)
-
+    second = join(outdir, id + "_2.fastq")
+    os.system("gzip " + join(outdir, id + "_1.fastq"))
+    if isfile(second):
+        os.system("gzip "+ second)
 
 def process_list(inputlist, outdir ):
     random.seed(239)
@@ -35,8 +39,13 @@ def process_list(inputlist, outdir ):
 #        if rand != 0:
 #            continue
         id = line.split()[0]
+        strat = line.split()[1]
+        tech = line.split()[2]
+        if strat != "WGS" or tech != "ILLUMINA":
+            print ("Line is wrong " + line.strip())
+            continue
         ids.append(id)    
-    Parallel(n_jobs=15)(delayed(download_sample)(id, outdir)
+    Parallel(n_jobs=5)(delayed(download_sample)(id, outdir)
     for id  in ids)
 #        exit()
 def create_download_list(inputdir):
