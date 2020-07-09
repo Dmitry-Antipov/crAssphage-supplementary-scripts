@@ -14,9 +14,10 @@ outputdir = "/Iceking/dantipov/human_gut/other_datasets/"
 sra_pref = "/home/dantipov/other_tools/sratoolkit.2.10.7-ubuntu64/bin/"
 other_datasets = "/Bmo/dantipov/data/500_random_datasets/"
 list = "/home/dantipov/scripts/human_gut_virome/all_updated.list"
+suff = ["_1.fastq.gz", ".fastq.gz", "_2.fastq.gz"]
 
 def download_sample(id, outdir):
-    if isfile(join(other_datasets, id + "_1.fastq.gz")) or isfile(join(outputdir, id + "_1.fastq.gz")):
+    if isfile(join(other_datasets, id + "_1.fastq.gz")) or isfile(join(outputdir, id + ".fastq.gz")):
         print id + " found "
         return
     pr_line = sra_pref + "prefetch --max-size 40000000 " + id
@@ -26,10 +27,21 @@ def download_sample(id, outdir):
     
     print fq_dump_line
     os.system(fq_dump_line)
-    second = join(outdir, id + "_2.fastq")
-    os.system("gzip " + join(outdir, id + "_1.fastq"))
-    if isfile(second):
-        os.system("gzip "+ second)
+    for s in suff:
+        file = join (outdir, id + s)
+        if isfile(file):
+            os.system ("gzip " + file)
+
+def cleanup (inputlist, fasta_dir):
+    for line in open(inputlist,"r"):
+        rand = random.randint(0, 10)
+#        if rand != 0:
+#            continue
+        id = line.split()[0]
+        strat = line.split()[1]
+        tech = line.split()[2]
+        if isfile(join(fasta_dir, id+".sra")) and isfile(join(outputdir, id + "_1.fastq.gz")):
+            os.remove(join(fasta_dir, id+".sra"))
 
 def process_list(inputlist, outdir ):
     random.seed(239)
@@ -64,4 +76,5 @@ def create_download_list(inputdir):
 #process_list(sys.argv[1], sys.argv[2])
 #create_download_list(inputdir)
 process_list(list, outputdir)
+#cleanup(list, "/Iceking/dantipov/ncbi/sra/")
 #create_download_list(inputdir)

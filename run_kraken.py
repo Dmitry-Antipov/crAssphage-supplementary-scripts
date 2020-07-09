@@ -26,7 +26,7 @@ workdir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_res2/"
 kraken_bin = "/home/dantipov/other_tools/kraken2/kraken/kraken2"
 braken_bin = "/Nancy/mrayko/Libs/Bracken-2.5/bracken"
 kraken_dir = "/home/dantipov/other_tools/kraken2/kraken/"
-tmp_dir = "/tmp/dantipov/"
+tmp_dir = "/Bmo/dantipov/tmp/"
 trimmomatic_jar = "/Nancy/mrayko/Libs/Trimmomatic-0.39/trimmomatic-0.39.jar"
 adapters_fasta = "/home/dantipov/scripts/human_gut_virome/adapters.fa"
 trim_in_suff = ["_1.fastq.gz", ".fastq.gz", "_2.fastq.gz"]
@@ -35,8 +35,9 @@ trim_out_suff = ["_1P.fastq", "_2P.fastq", "_1U.fastq", "_2U.fastq", "_S.fastq"]
 kraken_db ="/Bmo/dantipov/gut_pipeline/kraken_viral_db/"
 sra_tools =  "/home/dantipov/other_tools/sratoolkit.2.10.7-ubuntu64/bin/"
 #list = "/home/dantipov/scripts/human_gut_virome/500_updated.list"
+#ID Strategy Tech reads_length reads_number
 list = "/Bmo/dantipov/data/500_random_datasets/500_updated.list"
-patched_list = "/home/dantipov/scripts/human_gut_virome/all_length.list"
+#patched_list = "/home/dantipov/scripts/human_gut_virome/all_length.list"
 length_list = "/Bmo/dantipov/gut_pipeline/june_abund/all_genomes.length"
 inputdir = "/Bmo/dantipov/data/500_random_datasets/"
 #classified = "/Bmo/dantipov/gut_pipeline/abundancy_check/596_crass_related_gut_contigs.tsv"
@@ -53,7 +54,8 @@ class bracken_stats:
         self.level = arr[3]
         self.id = int(arr[4])
         self.name = arr[5]
-
+        self.kraken_clade = 0
+        self.kraken_self = 0
 def run_sample(sample_descr):
     srr = sample_descr[0]
 #    if srr != "SRR11771929":
@@ -102,7 +104,7 @@ def get_trimmomatic_str(srr_id, input_dir, outdir):
     else:
         mode = " SE "
         out_opt = join(outdir, srr_id)+"_S.fastq" 
-    str = "java -jar "+ trimmomatic_jar +mode + reads + " -threads 10 " + out_opt  + "  ILLUMINACLIP:" + adapters_fasta + ":2:30:10 >/dev/null"
+    str = "java -jar "+ trimmomatic_jar +mode + reads + " -threads 20 " + out_opt  + "  ILLUMINACLIP:" + adapters_fasta + ":2:30:10 >/dev/null"
     return str
 #java -jar  /Nancy/mrayko/Libs/Trimmomatic-0.39/trimmomatic-0.39.jar  PE -threads 30 -basein /Bmo/dantipov/data/500_random_datasets/ERR525702_1.fastq.gz  -baseout ERR525702 ILLUMINACLIP:/Nancy/mrayko/Libs/Trimmomatic-0.39/adapters/total.fa:2:30:10
 
@@ -147,6 +149,9 @@ def kraken_sample(inputdir, srr_id, workdir):
     if  not os.path.isdir (workdir):
         os.mkdir(workdir)
    # print (join(inputdir, srr_id + "_1.fastq.gz"))
+    if os.path.isfile (join(workdir, srr_id +".report")):
+        print (srr_id + " is already processed")
+        return
     if not os.path.isfile (join(inputdir, srr_id + "_1.fastq.gz")) and not os.path.isfile(join(inputdir, srr_id + ".fastq.gz")) :
         print (srr_id + " is not present")
         return
@@ -172,7 +177,7 @@ def run_all_bracken (list, workdir):
     for line in open (list, "r"):
         arr = line.strip().split()
         try:
-            length = float(arr[1])
+            length = float(arr[3])
             length = int(round(length))
 
         except:    
@@ -183,6 +188,8 @@ def run_all_bracken (list, workdir):
 def merge_brackens(workdir):
     nodes = taxonomy_scripts.read_nodes(taxonomy_scripts.kraken_names, taxonomy_scripts.kraken_nodes)
     bracken_all = {}
+    kracken_all = {}
+    add_kraken = True
     for f in os.listdir(workdir):
         arr = f.split("_")
         
@@ -194,9 +201,18 @@ def merge_brackens(workdir):
                 else:
                     bracken_all[br.id].reads_clade += br.reads_clade
                     bracken_all[br.id].reads_self += br.reads_self
+            kr_file = arr[0] + ".report"
+            for line in open(join(workdir, kr_file),'r'):
+                kr = bracken_stats(line)
+                if kr.id in bracken_all:
+                    bracken_all[kr.id].kraken_clade += kr.reads_clade
+                    bracken_all[kr.id].kraken_self += kr.reads_self
+#                else:
+#                    if kr.id != 0:
+#                        print ("{}\t{}\t{}".format(kr.id, kr.level, arr[0]))
     start_node = 1
 #root in podoviridae
-    start_node = 10744
+#    start_node = 10744
     for br in bracken_all:
         bracken_all[br].percentage = 100.00 * bracken_all[br].reads_clade / bracken_all[start_node].reads_clade
     for br in bracken_all:
@@ -207,11 +223,16 @@ def merge_brackens(workdir):
     def print_childs(id):
 #100.00  443943  0       D       10239     Viruses
         info = bracken_all[id]
-        print ("{:.2f}".format(info.percentage) + "\t" + str(info.reads_clade) + "\t" + str(info.reads_self) +  "\t" + info.level + "\t" + str(info.id) + "\t" + info.name)
+        res = "{:.2f}\t{}\t{}\t{}\t{}\t{}".format(info.percentage, info.reads_clade, info.reads_self, info.level, info.id, info.name)
+# + "\t" + str(info.reads_clade) + "\t" + str(info.reads_self) +  "\t" + info.level + "\t" + str(info.id) + "\t" + info.name
+        if add_kraken:
+            res += "\t{}\t{}\t{:.4f}".format(info.kraken_clade, info.kraken_self, info.kraken_clade/info.reads_clade)
+#        print ("{:.2f}".format(info.percentage) + "\t" + str(info.reads_clade) + "\t" + str(info.reads_self) +  "\t" + info.level + "\t" + str(info.id) + "\t" + info.name)
+        print (res)
         for child in sorted(info.childs, key=info.childs.get, reverse=True):
             print_childs(child)
     print_childs(start_node)
-#merge_brackens(workdir)
-#run_all_bracken(patched_list, workdir)
-run_all_kraken(list, inputdir, workdir)
+merge_brackens(workdir)
+#run_all_bracken(list, workdir)
+#run_all_kraken(list, inputdir, workdir)
 
