@@ -190,12 +190,15 @@ def merge_brackens(workdir):
     bracken_all = {}
     kracken_all = {}
     add_kraken = True
+    total_reads = 0
     for f in os.listdir(workdir):
         arr = f.split("_")
         
         if len(arr) > 1 and arr[-1] == "bracken.report":
+            tmp  = {}
             for line in open(join(workdir,f),'r'):
                 br = bracken_stats(line)
+                tmp[br.id] = br
                 if not br.id in bracken_all:
                     bracken_all[br.id] = br
                 else:
@@ -204,13 +207,20 @@ def merge_brackens(workdir):
             kr_file = arr[0] + ".report"
             for line in open(join(workdir, kr_file),'r'):
                 kr = bracken_stats(line)
+                if kr.id <= 1 :
+                    total_reads += kr.reads_clade
                 if kr.id in bracken_all:
                     bracken_all[kr.id].kraken_clade += kr.reads_clade
                     bracken_all[kr.id].kraken_self += kr.reads_self
-#                else:
-#                    if kr.id != 0:
-#                        print ("{}\t{}\t{}".format(kr.id, kr.level, arr[0]))
+                    if kr.id not in tmp:
+                        continue
+#                    tmp[kr.id].kraken_clade += kr.reads_clade
+#                if kr.id == 10239 and tmp[kr.id].reads_clade < kr.reads_clade:
+#                    print ("{}\t{}\t{}".format(tmp[kr.id].reads_clade, kr.reads_clade,  arr[0]))
+                    
+#                    exit()
     start_node = 1
+#    print(str(total_reads) + " total reads" )
 #root in podoviridae
 #    start_node = 10744
     for br in bracken_all:

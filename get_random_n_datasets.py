@@ -23,7 +23,7 @@ def download_sample(id, outdir):
     pr_line = sra_pref + "prefetch --max-size 40000000 " + id
     print pr_line
     os.system(pr_line)
-    fq_dump_line = sra_pref + "fasterq-dump -t /tmp/dantipov/ " + id + " -O " + outdir
+    fq_dump_line = sra_pref + "fasterq-dump -t /Bmo/dantipov/tmp/ " + id + " -O " + outdir
     
     print fq_dump_line
     os.system(fq_dump_line)
