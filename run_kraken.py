@@ -242,7 +242,9 @@ def merge_brackens(workdir):
         for child in sorted(info.childs, key=info.childs.get, reverse=True):
             print_childs(child)
     print_childs(start_node)
-merge_brackens(workdir)
+
+if __name__ == "__main__":
+    merge_brackens(workdir)
 #run_all_bracken(list, workdir)
 #run_all_kraken(list, inputdir, workdir)
 

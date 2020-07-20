@@ -18,7 +18,8 @@ unclass_podoviridae_id = 196895
 input_dir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_genomes_saved/"
 patched_dir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_genomes_splitted/"
 kraken_build = "/home/dantipov/other_tools/kraken2/kraken/kraken2-build"
-kraken_db = "/Bmo/dantipov/gut_pipeline/kraken_viral_db/"
+#kraken_db = "/Bmo/dantipov/gut_pipeline/kraken_viral_db/"
+kraken_db = "/Bmo/dantipov/gut_pipeline/standard_db_updated/"
 kraken_names = kraken_db + "/taxonomy/names.dmp"
 kraken_nodes = kraken_db + "/taxonomy/nodes.dmp"
 kraken_original_names = kraken_db + "/taxonomy/names_save.dmp"
@@ -28,6 +29,8 @@ kraken_cleared_nodes = kraken_db + "/taxonomy/nodes_cleared.dmp"
 kraken_additional_names =  kraken_db + "/taxonomy/names_additional.dmp"
 kraken_additional_nodes =  kraken_db + "/taxonomy/nodes_additional.dmp"
 fake_subgroups ={"partial genome", "phi17_2_NC_021798", "phi13_2_NC_021803", "MethylophagaPAJP01000008"}
+clusters_f = "/Bmo/dantipov/gut_pipeline/june_abund/clusters.cls"
+
 
 all_names_file = ""
 class reference_stats:
@@ -36,6 +39,7 @@ class reference_stats:
         self.sample_id = sample_id
         self.group = ""
         self.subgroup = ""
+        self.cluster = ""
     def __str__(self):
         return(self.name +" " + str(self.sample_id) + " " + self.group)
 
@@ -46,22 +50,19 @@ class node:
         self.parent_id = parent_id
         self.isleaf = isleaf
         self.depth = -1
+        self.iscluster = False
 #used to remove subtree
         self.bad = "unknown"
     def __str__(self):
 #(f"{taxid}\t|\t1978007\t|\tspecies\t|\tCS\t|\t3\t|\t1\t|\t11\t|\t1\t|\t0\t|\t1\t|\t1\t|\t0\t|\t|\t")
 #print(f"{taxid}\t|\t{line.split()[0]}\t|\t \t|\tscientific name\t|\t")
 
-        if  self.isleaf == False:
-#more precise bullshit?
-            rank = "clade"
-        else:
-            rank = "species"
-#        return (f"{self.sample_id}\t|\t{self.parent_id}\t|\t{rank}\t|\tCS\t|\t3\t|\t1\t|\t11\t|\t1\t|\t0\t|\t1\t|\t1\t|\t0\t|\t|")
-        return(f"{self.sample_id}\t|\t{self.name}\t|\t \t|\tscientific name\t|\t")
+        return(nodes_str(self))
 
     def nodes_str(self):
         if  self.isleaf == False:
+            if self.iscluster:
+                rank = "genus"
 #more precise bullshit?
             rank = "clade"
         else:
@@ -98,6 +99,22 @@ def create_taxonomy():
     sample_id = start_taxid
     groups = {}
     subgroups = {}
+
+    clusters = []   
+    name_to_clust = {}
+    check = {}
+    clust_id = 0
+    clusters_to_sub = {}
+    for line in open(clusters_f, 'r'):
+        arr = line.strip().split()
+        if len(arr) == 0:
+            break
+        clusters.append(set(arr[1:]))
+        clust_id +=1
+        clust_name = clust_id 
+        for name in arr[1:]:
+            name_to_clust[name] = str(clust_name)
+    subs_to_clust = {}
     with open (taxonomy_table, "r") as infile:#
         for line in infile:
             #print (line.split())
@@ -118,6 +135,19 @@ def create_taxonomy():
             refs[sample_id] =  reference_stats(name,sample_id)
             refs[sample_id].group = group
             refs[sample_id].subgroup =  subgroup
+            if name in name_to_clust and subgroup != "":
+#                old_name = subgroup + "__" + name_to_clust[name]
+                if subgroup not in subs_to_clust:
+                    subs_to_clust[subgroup] = {}
+                old_name = name_to_clust[name]
+                if old_name in subs_to_clust[subgroup]:
+                    new_name = subs_to_clust[subgroup][old_name]
+                else:
+                    new_name = subgroup+ "__" + str(len(subs_to_clust[subgroup]) + 1)
+                    subs_to_clust[subgroup][old_name] = new_name
+                clust = new_name
+                refs[sample_id].cluster = clust
+                clusters_to_sub[clust] = subgroup
     nodes = {}
     order =[]
     for group in groups:
@@ -138,6 +168,15 @@ def create_taxonomy():
         sample_id += 1
         nodes[subgroup] = node(subgroup, sample_id, nodes[subgroups[subgroup]].sample_id, False)
         order.append(subgroup)
+    for cl in clusters_to_sub:
+        sample_id += 1
+        nodes[cl] = node(cl, sample_id, nodes[clusters_to_sub[cl]].sample_id, False)
+        nodes[cl].iscluster = True
+        order.append(cl)
+
+#    for cl in clusters:
+#        sample_id += 1
+            
     leafs = []
     for ref_id in refs:
         ref = refs[ref_id]
@@ -149,6 +188,8 @@ def create_taxonomy():
             parent = nodes[ref.group].sample_id
             if ref.subgroup != '':
                 parent = nodes[ref.subgroup].sample_id
+            if ref.cluster != '':
+                parent = nodes [ref.cluster].sample_id
         nodes[ref.name] = node (ref.name, ref.sample_id, parent, True)
         order.append(ref.name)
 
@@ -164,7 +205,7 @@ def create_taxonomy():
 def add_to_lib():
 # --add-to-library /Bmo/dantipov/gut_pipeline/june_abund/kraken_genomes_splitted/crAssphage.fasta --db  /Bmo/dantipov/gut_pipeline/june_abund/kraken_genomes_splitted/
     for ref in listdir(patched_dir):
-        os.system(kraken_build + " --add-to-library " + join(patched_dir,ref) +" --db " + "/Bmo/dantipov/gut_pipeline/kraken_viral_db/")    
+        os.system(kraken_build + " --add-to-library " + join(patched_dir,ref) +" --db " + kraken_db)    
 
 
 def read_nodes(names_file, nodes_file):
@@ -264,6 +305,7 @@ def prepare_db():
     print ("added new sequences to lib...")
     os.system(kraken_build + " --threads 20 --build --db " + kraken_db)
 
-#prepare_db()
+#create_taxonomy()
+prepare_db()
 #add_to_lib()
 #add_names_for_braken()

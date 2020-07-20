@@ -15,11 +15,13 @@ sra_pref = "/home/dantipov/other_tools/sratoolkit.2.10.7-ubuntu64/bin/"
 other_datasets = "/Bmo/dantipov/data/500_random_datasets/"
 list = "/home/dantipov/scripts/human_gut_virome/all_updated.list"
 suff = ["_1.fastq.gz", ".fastq.gz", "_2.fastq.gz"]
-
+uncompressed_suff = ["_1.fastq", "_2.fastq", ".fastq"]
 def download_sample(id, outdir):
-    if isfile(join(other_datasets, id + "_1.fastq.gz")) or isfile(join(outputdir, id + ".fastq.gz")):
-        print id + " found "
-        return
+    for ready_dir in [other_datasets, outdir]:
+        for cur_suff in suff:
+            if isfile(join(ready_dir, id + cur_suff)):
+                print id + " found "
+                return
     pr_line = sra_pref + "prefetch --max-size 40000000 " + id
     print pr_line
     os.system(pr_line)
@@ -27,7 +29,8 @@ def download_sample(id, outdir):
     
     print fq_dump_line
     os.system(fq_dump_line)
-    for s in suff:
+    for s in uncompressed_suff:
+        
         file = join (outdir, id + s)
         if isfile(file):
             os.system ("gzip " + file)
