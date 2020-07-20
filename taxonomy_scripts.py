@@ -64,7 +64,8 @@ class node:
             if self.iscluster:
                 rank = "genus"
 #more precise bullshit?
-            rank = "clade"
+            else:
+                rank = "clade"
         else:
             rank = "species"
         return (f"{self.sample_id}\t|\t{self.parent_id}\t|\t{rank}\t|\tCS\t|\t3\t|\t1\t|\t11\t|\t1\t|\t0\t|\t1\t|\t1\t|\t0\t|\t\t|")
