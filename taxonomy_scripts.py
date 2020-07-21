@@ -19,7 +19,8 @@ input_dir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_genomes_saved/"
 patched_dir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_genomes_splitted/"
 kraken_build = "/home/dantipov/other_tools/kraken2/kraken/kraken2-build"
 #kraken_db = "/Bmo/dantipov/gut_pipeline/kraken_viral_db/"
-kraken_db = "/Bmo/dantipov/gut_pipeline/standard_db_updated/"
+kraken_db = "/Bmo/dantipov/gut_pipeline/kraken_viral_db_clusters/"
+#kraken_db = "/Bmo/dantipov/gut_pipeline/standard_db_updated/"
 kraken_names = kraken_db + "/taxonomy/names.dmp"
 kraken_nodes = kraken_db + "/taxonomy/nodes.dmp"
 kraken_original_names = kraken_db + "/taxonomy/names_save.dmp"
@@ -84,15 +85,17 @@ def add_nodes (order, nodes):
         outf.write(nodes[ref].nodes_str() + "\n")
 
 def patch_fasta (order, nodes):
+    os.system ("rm " + patched_dir + "/*.fasta")
+    outf = open(join(patched_dir,   "concat.fasta"),"w")
     for ref in order:
         inf = join(input_dir, ref + ".fasta")
         if os.path.isfile(inf):
-            outf = open(join(patched_dir, ref + ".fasta"),"w")
+           # outf = open(join(patched_dir, ref + ".fasta"),"w")
             for line in open (inf, "r"):
                 if line[0] ==">":
                     line = f">kraken:taxid|{nodes[ref].sample_id}|{nodes[ref].name}|" + line[1:]
                 outf.write(line)
-    
+   
 
 
 def create_taxonomy():
@@ -295,9 +298,9 @@ def prepare_db():
     create_taxonomy()
     clear_extra_nodes()
     os.system("cat "+ kraken_cleared_names +" "+ kraken_additional_names + " > " + kraken_names)
-    os.system("cat "+ kraken_cleared_nodes +" "+ kraken_additional_nodes + " > " + kraken_nodes)
-#    os.system("cat "+ kraken_original_names +" "+ kraken_additional_names + " > " + kraken_names)
-#    os.system("cat "+ kraken_original_nodes +" "+ kraken_additional_nodes + " > " + kraken_nodes)
+    os.system("cat "+ kraken_cleared_nodes +" "+ kraken_additional_nodes + " > " + kraken_nodes) 
+#    os.system("cat "+ kraken_cleared_names + " > " + kraken_names)
+#    os.system("cat "+ kraken_cleared_nodes + "  > " + kraken_nodes)
     os.system("rm " + kraken_db + "/*.k2d")
     os.system("rm " + kraken_db + "/seqid2taxid.map")
     os.system("rm "+ kraken_db + "/library/added/*")
