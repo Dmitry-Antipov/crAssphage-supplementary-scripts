@@ -22,7 +22,7 @@ ref = "/Bmo/dantipov/gut_pipeline/june_abund/all_genomes.fa"
 #workdir = "/Iceking/dantipov/human_gut/depth_reports/"
 #workdir = "/Iceking/dantipov/human_gut/crass_reports/"
 #workdir = "/Iceking/dantipov/human_gut/check/"
-workdir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_res2/"
+workdir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_res_500_full/"
 kraken_bin = "/home/dantipov/other_tools/kraken2/kraken/kraken2"
 braken_bin = "/Nancy/mrayko/Libs/Bracken-2.5/bracken"
 kraken_dir = "/home/dantipov/other_tools/kraken2/kraken/"
@@ -32,7 +32,7 @@ adapters_fasta = "/home/dantipov/scripts/human_gut_virome/adapters.fa"
 trim_in_suff = ["_1.fastq.gz", ".fastq.gz", "_2.fastq.gz"]
 trim_out_suff = ["_1P.fastq", "_2P.fastq", "_1U.fastq", "_2U.fastq", "_S.fastq"]
 
-kraken_db ="/Bmo/dantipov/gut_pipeline/kraken_viral_db/"
+kraken_db ="/Bmo/dantipov/gut_pipeline/standard_db_updated/"
 sra_tools =  "/home/dantipov/other_tools/sratoolkit.2.10.7-ubuntu64/bin/"
 #list = "/home/dantipov/scripts/human_gut_virome/500_updated.list"
 #ID Strategy Tech reads_length reads_number
@@ -244,7 +244,7 @@ def merge_brackens(workdir):
     print_childs(start_node)
 
 if __name__ == "__main__":
-    merge_brackens(workdir)
+#    merge_brackens(workdir)
 #run_all_bracken(list, workdir)
-#run_all_kraken(list, inputdir, workdir)
+    run_all_kraken(list, inputdir, workdir)
 

@@ -10,7 +10,7 @@ import csv
 import subprocess
 
 #end of used taxids
-start_taxid = 2748050
+start_taxid = 2750000
 taxonomy_table = "/Bmo/dantipov/gut_pipeline/june_abund/table_1.tsv"
 crassfamily_id = 1978007
 poroviridae_id = 10744
@@ -19,8 +19,8 @@ input_dir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_genomes_saved/"
 patched_dir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_genomes_splitted/"
 kraken_build = "/home/dantipov/other_tools/kraken2/kraken/kraken2-build"
 #kraken_db = "/Bmo/dantipov/gut_pipeline/kraken_viral_db/"
-kraken_db = "/Bmo/dantipov/gut_pipeline/kraken_viral_db_clusters/"
-#kraken_db = "/Bmo/dantipov/gut_pipeline/standard_db_updated/"
+#kraken_db = "/Bmo/dantipov/gut_pipeline/kraken_viral_db_clusters/"
+kraken_db = "/Bmo/dantipov/gut_pipeline/standard_db_updated/"
 kraken_names = kraken_db + "/taxonomy/names.dmp"
 kraken_nodes = kraken_db + "/taxonomy/nodes.dmp"
 kraken_original_names = kraken_db + "/taxonomy/names_save.dmp"
@@ -90,17 +90,19 @@ def patch_fasta (order, nodes):
     for ref in order:
         inf = join(input_dir, ref + ".fasta")
         if os.path.isfile(inf):
-           # outf = open(join(patched_dir, ref + ".fasta"),"w")
+#            outf = open(join(patched_dir, ref + ".fasta"),"w")
             for line in open (inf, "r"):
                 if line[0] ==">":
-                    line = f">kraken:taxid|{nodes[ref].sample_id}|{nodes[ref].name}|" + line[1:]
+                    line = f">kraken:taxid|{nodes[ref].sample_id}|{nodes[ref].name} " + line[1:]
                 outf.write(line)
+#            break
    
 
 
 def create_taxonomy():
     refs = {}
     sample_id = start_taxid
+    print ("starting with " + str(sample_id))
     groups = {}
     subgroups = {}
 
@@ -139,19 +141,22 @@ def create_taxonomy():
             refs[sample_id] =  reference_stats(name,sample_id)
             refs[sample_id].group = group
             refs[sample_id].subgroup =  subgroup
-            if name in name_to_clust and subgroup != "":
+            clust_parent = subgroup
+            if clust_parent == '' and group != "outgroup" :
+                clust_parent = group
+            if name in name_to_clust and clust_parent != "":
 #                old_name = subgroup + "__" + name_to_clust[name]
-                if subgroup not in subs_to_clust:
-                    subs_to_clust[subgroup] = {}
+                if clust_parent not in subs_to_clust:
+                    subs_to_clust[clust_parent] = {}
                 old_name = name_to_clust[name]
-                if old_name in subs_to_clust[subgroup]:
-                    new_name = subs_to_clust[subgroup][old_name]
+                if old_name in subs_to_clust[clust_parent]:
+                    new_name = subs_to_clust[clust_parent][old_name]
                 else:
-                    new_name = subgroup+ "__" + str(len(subs_to_clust[subgroup]) + 1)
-                    subs_to_clust[subgroup][old_name] = new_name
+                    new_name = clust_parent+ "__" + str(len(subs_to_clust[clust_parent]) + 1)
+                    subs_to_clust[clust_parent][old_name] = new_name
                 clust = new_name
                 refs[sample_id].cluster = clust
-                clusters_to_sub[clust] = subgroup
+                clusters_to_sub[clust] = clust_parent
     nodes = {}
     order =[]
     for group in groups:
@@ -182,10 +187,11 @@ def create_taxonomy():
 #        sample_id += 1
             
     leafs = []
+    new_order = []
     for ref_id in refs:
         ref = refs[ref_id]
         parent = -239
-        print (ref)
+#        print (ref)
         if ref.group == "outgroup":
             parent = poroviridae_id
         else:
@@ -194,9 +200,12 @@ def create_taxonomy():
                 parent = nodes[ref.subgroup].sample_id
             if ref.cluster != '':
                 parent = nodes [ref.cluster].sample_id
+            else:
+                print ("{} no cluster {}".format(ref.name, ref.subgroup))
         nodes[ref.name] = node (ref.name, ref.sample_id, parent, True)
-        order.append(ref.name)
-
+        new_order.append(ref.name)
+    new_order.extend(order)
+    order = new_order
     add_names(order, nodes)
     add_nodes(order, nodes)  
     print("additions for taxonomy created..")  
@@ -294,22 +303,35 @@ def clear_extra_nodes():
             patched_nodesf.write(line.strip() + "\n")
     print("cleared internal podoviridae nodes..")            
 
+def update_last_id():
+    global start_taxid
+    maxcount = 0
+    for line in open(kraken_original_names):
+        id  = int (line.split()[0])
+        if id > maxcount:
+            maxcount = id
+    start_taxid = maxcount    
+    
 def prepare_db():
+    update_last_id()
     create_taxonomy()
     clear_extra_nodes()
+
     os.system("cat "+ kraken_cleared_names +" "+ kraken_additional_names + " > " + kraken_names)
     os.system("cat "+ kraken_cleared_nodes +" "+ kraken_additional_nodes + " > " + kraken_nodes) 
-#    os.system("cat "+ kraken_cleared_names + " > " + kraken_names)
-#    os.system("cat "+ kraken_cleared_nodes + "  > " + kraken_nodes)
+#    os.system("cat "+ kraken_original_names + " > " + kraken_names)
+#    os.system("cat "+ kraken_original_nodes + "  > " + kraken_nodes)
     os.system("rm " + kraken_db + "/*.k2d")
     os.system("rm " + kraken_db + "/seqid2taxid.map")
     os.system("rm "+ kraken_db + "/library/added/*")
     print ("cleared old files...")
+#    exit() 
     add_to_lib()
     print ("added new sequences to lib...")
-    os.system(kraken_build + " --threads 20 --build --db " + kraken_db)
+    os.system(kraken_build + " --threads 30 --build --db " + kraken_db)
+if __name__ == "__main__":
 
-#create_taxonomy()
-prepare_db()
-#add_to_lib()
-#add_names_for_braken()
+    #create_taxonomy()
+    prepare_db()
+    #add_to_lib()
+    #add_names_for_braken()
