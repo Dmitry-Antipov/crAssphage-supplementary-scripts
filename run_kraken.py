@@ -11,7 +11,7 @@ from joblib import Parallel, delayed
 import csv
 import subprocess
 import taxonomy_scripts
-
+import math
 #constants
 low_coverage = 10
 samtools = "samtools"
@@ -22,7 +22,9 @@ ref = "/Bmo/dantipov/gut_pipeline/june_abund/all_genomes.fa"
 #workdir = "/Iceking/dantipov/human_gut/depth_reports/"
 #workdir = "/Iceking/dantipov/human_gut/crass_reports/"
 #workdir = "/Iceking/dantipov/human_gut/check/"
-workdir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_res_500_full/"
+#workdir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_res_500_full/"
+workdir = "/Bmo/dantipov/gut_pipeline/june_abund/kraken_res_full_other/"
+
 kraken_bin = "/home/dantipov/other_tools/kraken2/kraken/kraken2"
 braken_bin = "/Nancy/mrayko/Libs/Bracken-2.5/bracken"
 kraken_dir = "/home/dantipov/other_tools/kraken2/kraken/"
@@ -36,10 +38,11 @@ kraken_db ="/Bmo/dantipov/gut_pipeline/standard_db_updated/"
 sra_tools =  "/home/dantipov/other_tools/sratoolkit.2.10.7-ubuntu64/bin/"
 #list = "/home/dantipov/scripts/human_gut_virome/500_updated.list"
 #ID Strategy Tech reads_length reads_number
-list = "/Bmo/dantipov/data/500_random_datasets/500_updated.list"
+#list = "/Bmo/dantipov/data/500_random_datasets/500_updated.list"
+list = "/home/dantipov/scripts/human_gut_virome/all_updated.list"
 #patched_list = "/home/dantipov/scripts/human_gut_virome/all_length.list"
-length_list = "/Bmo/dantipov/gut_pipeline/june_abund/all_genomes.length"
-inputdir = "/Bmo/dantipov/data/500_random_datasets/"
+#inputdir = "/Bmo/dantipov/data/500_random_datasets/"
+inputdir = "/Iceking/dantipov/human_gut/other_datasets/"
 #classified = "/Bmo/dantipov/gut_pipeline/abundancy_check/596_crass_related_gut_contigs.tsv"
 classified = "/Bmo/dantipov/gut_pipeline/june_abund/table_1.tsv"
 
@@ -128,12 +131,13 @@ def get_bracken_str(srr_id, length, workdir):
         print (srr_id + " processed")
         return ""
     res =[]
+    length = math.trunc(int(length) /10) * 10
     if not os.path.exists(join(kraken_db, "database{}mers.kmer_distrib".format(length))):
 #/Bmo/dantipov/gut_pipeline/kraken_viral_db/database101mers.kmer_distrib
-        res.append(braken_bin+ "-build  -d " + kraken_db + " -t 20  -l " + length + " -x " + kraken_dir + " > bracken.log")
+        res.append(braken_bin+ "-build  -d " + kraken_db + " -t 20  -l " + str(length) + " -x " + kraken_dir + " > bracken.log")
     else:
         print  ("db for read length {} already constructed, skipping".format(length))
-    res.append( braken_bin + " -d " + kraken_db + " -i " +infile + " -o " + outfile + " -r " + length + " > bracken.log" )
+    res.append( braken_bin + " -d " + kraken_db + " -i " +infile + " -o " + outfile + " -r " + str(length) + " > bracken.log" )
 #./bracken-build -d ${KRAKEN_DB} -t ${THREADS} -k ${KMER_LEN} -l ${READ_LEN} -x ${KRAKEN_INSTALLATION}
 
     return res
@@ -245,6 +249,6 @@ def merge_brackens(workdir):
 
 if __name__ == "__main__":
 #    merge_brackens(workdir)
-#run_all_bracken(list, workdir)
+#    run_all_bracken(list, workdir)
     run_all_kraken(list, inputdir, workdir)
 

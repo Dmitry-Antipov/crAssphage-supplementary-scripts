@@ -22,6 +22,7 @@ def get_sra_info(infile):
             exit(1)
 
         meta = handle.readlines()
+        print (meta)
         parsed = list(csv.reader(meta))
         names = parsed[0]
         for i in range(1, len(parsed)) :
